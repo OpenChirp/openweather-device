@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenWeather OpenChirp Device Service
+Documentation=https://github.com/OpenChirp/openweather_service
+Wants=network-online.target
+After=network-online.target mosquitto.service
+
+[Service]
+User=infra
+Group=infra
+
+ExecStart=/usr/bin/python2.7 /infra/openweather_service/OpenWeather.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
