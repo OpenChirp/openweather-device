@@ -3,7 +3,7 @@
 from api.openweathermap.org using the api key"""
 
 __author__ = "Artur Balanuta"
-__version__ = "2.0.1"
+__version__ = "2.0.4"
 __email__ = "arturb [at] andrew.cmu.edu"
 
 
@@ -23,7 +23,7 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
 class OpenWeatherMapAPI():
-    
+
     QUERY_PAGE = "http://api.openweathermap.org/"
     WEATHER_PATH = "data/2.5/weather?"
     UVI_PATH = "/data/2.5/uvi?"
@@ -39,7 +39,7 @@ class OpenWeatherMapAPI():
     def __init__(self):
         #self.updateValues()  # Runs one time
         pass
-        
+
     def getJSON(self, url):
         json = dict()
         try:
@@ -54,7 +54,7 @@ class OpenWeatherMapAPI():
         self.updateWeather(publisFunc)
         self.updateUVindex(publisFunc)
         self.updateCarbonMonoxide(publisFunc)
-        self.updateSulfurDioxide(publisFunc)  
+        self.updateSulfurDioxide(publisFunc)
 
     def updateSulfurDioxide(self, publisFunc):
         url = self.QUERY_PAGE + self.SULFUR_DIOXIDE_PATH + str(int(float(self.LAT))) + "," + str(int(float(self.LON))) + "/current.json?" +self.APPID
@@ -103,7 +103,7 @@ class OpenWeatherMapAPI():
 
         url = self.QUERY_PAGE + self.WEATHER_PATH + self.COORDENATES + self.UNITS + self.APPID
         json = self.getJSON(url)
-        
+
         for (name, items) in json.items():
             if name in ["name", "sys", "coord", "weather", "base", "dt", "id", "cod"]:
                 continue
@@ -154,15 +154,13 @@ class OpenWeatherMapAPI():
 
 
 class Runner():
-    
+
     API = OpenWeatherMapAPI()
-
-
-    HOST='openchirp.andrew.cmu.edu'
+    HOST='mqtt.openchirp.io'
     USER=''
     TOKEN=''
-    ENDPOINT='openchirp/devices/'+USER+'/#'
-    TRANSDUCER_ENDPOINT='openchirp/devices/'+USER+'/transducer/'
+    ENDPOINT='openchirp/device/'+USER+'/#'
+    TRANSDUCER_ENDPOINT='openchirp/device/'+USER+'/'
 
     def __init__(self):
         signal.signal(signal.SIGINT, self.signal_handler)
@@ -175,14 +173,15 @@ class Runner():
     def run(self):
         print "Starting..."
         while True:
-            self.client.connect(self.HOST, 1883, 60)
+            self.client.connect(self.HOST, 8883, 60)
             self.API.publishData(self.publish)
             self.client.disconnect()
             time.sleep(10 * 60) # once every 10 minutes
 
     def publish(self, transducer, value):
         self.client.publish(self.TRANSDUCER_ENDPOINT+transducer, value)
-    
+	logging.info(self.TRANSDUCER_ENDPOINT+transducer+":"+str(value))
+
     def signal_handler(self, signal, frame):
         logging.info('Received kill signal ..Stopping service daemon')
         try:
@@ -200,4 +199,3 @@ class Runner():
 
 if __name__ == "__main__":
     Runner().run()
-    
