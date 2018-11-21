@@ -3,7 +3,7 @@
 from api.openweathermap.org using the api key"""
 
 __author__ = "Artur Balanuta"
-__version__ = "2.0.4"
+__version__ = "2.0.5"
 __email__ = "arturb [at] andrew.cmu.edu"
 
 
@@ -17,10 +17,37 @@ import paho.mqtt.client as mqtt
 from urllib2 import urlopen
 from json import loads as decode_json
 from datetime import datetime
+from optparse import OptionParser
+from configparser import ConfigParser
 
 
 # create logger
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+
+
+def parse_arguments():
+    optp = OptionParser()
+    optp.add_option('-f','--config_file', dest='config_file', help='Config file')
+    opts, args = optp.parse_args()
+    
+    if opts.config_file is None:
+        optp.print_help()
+        exit()
+
+    print("Loading configuration file: "+str(opts.config_file))
+
+    config = ConfigParser()
+    config.read(opts.config_file)
+
+    opts = dict()
+
+    for key in config['DEFAULT']:
+        opts[key] = config['DEFAULT'][key]
+
+
+    print opts
+    return opts
+
 
 class OpenWeatherMapAPI():
 
@@ -36,8 +63,9 @@ class OpenWeatherMapAPI():
     UNITS = "&units=metric"
     APPID = "&appid="
 
-    def __init__(self):
+    def __init__(self, appId):
         #self.updateValues()  # Runs one time
+        self.APPID = "&appid="+appId
         pass
 
     def getJSON(self, url):
@@ -155,12 +183,14 @@ class OpenWeatherMapAPI():
 
 class Runner():
 
-    API = OpenWeatherMapAPI()
-    HOST='mqtt.openchirp.io'
-    USER=''
-    TOKEN=''
-    ENDPOINT='openchirp/device/'+USER+'/#'
-    TRANSDUCER_ENDPOINT='openchirp/device/'+USER+'/'
+    CONF = parse_arguments()
+    API = OpenWeatherMapAPI(CONF['weather_app_id'])
+    HOST = CONF['mqtt_host']
+    HOST_PORT = int(CONF['mqtt_port'])  
+    USER = CONF['mqtt_user']
+    TOKEN = CONF['mqtt_token']
+    ENDPOINT = 'openchirp/device/'+USER+'/#'
+    TRANSDUCER_ENDPOINT = 'openchirp/device/'+USER+'/'
 
     def __init__(self):
         signal.signal(signal.SIGINT, self.signal_handler)
@@ -168,12 +198,12 @@ class Runner():
         self.client.on_connect = self.on_connect
         self.client.on_log = self.on_log
         self.client.username_pw_set(self.USER, self.TOKEN)
-        self.client.tls_set(tls_version = ssl.PROTOCOL_TLSv1)
+        self.client.tls_set(tls_version = ssl.PROTOCOL_TLS)
 
     def run(self):
         print "Starting..."
         while True:
-            self.client.connect(self.HOST, 8883, 60)
+            self.client.connect(self.HOST, self.HOST_PORT, 60)
             self.API.publishData(self.publish)
             self.client.disconnect()
             time.sleep(10 * 60) # once every 10 minutes
