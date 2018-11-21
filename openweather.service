@@ -8,7 +8,7 @@ After=network-online.target mosquitto.service
 User=infra
 Group=infra
 
-ExecStart=/usr/bin/python2.7 /infra/openweather_service/OpenWeather.py
+ExecStart=/usr/bin/python2.7 /infra/openweather_service/OpenWeather.py -f /infra/openweather_service/service.conf
 Restart=on-failure
 RestartSec=5
 
